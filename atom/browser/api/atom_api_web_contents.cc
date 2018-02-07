@@ -1490,7 +1490,7 @@ void WebContents::SendInputEvent(v8::Isolate* isolate,
     web_contents()->GetRenderWidgetHostView());
   if (!view)
     return;
-  float scale = view->current_device_scale_factor();
+  float scale = GetScaleFactor();
 
   int type = mate::GetWebInputEventType(isolate, input_event);
   if (blink::WebInputEvent::IsMouseEventType(type)) {
@@ -1728,7 +1728,7 @@ void WebContents::Invalidate() {
     auto* osr_rwhv = static_cast<OffScreenRenderWidgetHostView*>(
       web_contents()->GetRenderWidgetHostView());
     if (osr_rwhv)
-      osr_rwhv->Invalidate();
+      osr_rwhv->Invalidate(false);
 #endif
   } else {
     const auto window = owner_window();
