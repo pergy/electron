@@ -949,8 +949,10 @@ void OffScreenRenderWidgetHostView::OnPaint(const gfx::Rect& damage_rect,
   } else {
     gfx::Rect damage(damage_rect);
 
-    gfx::Size size_in_pixels = gfx::ConvertSizeToPixel(
-        current_device_scale_factor_, GetViewBounds().size());
+    gfx::Rect bounds_in_pixels =
+        gfx::ConvertRectToPixel(current_device_scale_factor_, GetViewBounds());
+
+    gfx::Size size_in_pixels = bounds_in_pixels.size();
 
     SkBitmap backing;
     backing.allocN32Pixels(size_in_pixels.width(), size_in_pixels.height(),
@@ -977,7 +979,7 @@ void OffScreenRenderWidgetHostView::OnPaint(const gfx::Rect& damage_rect,
                          origin_in_pixels.y());
     }
 
-    damage.Intersect(GetViewBounds());
+    damage.Intersect(bounds_in_pixels);
     paint_callback_running_ = true;
     callback_.Run(damage, backing);
     paint_callback_running_ = false;
