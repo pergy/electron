@@ -308,6 +308,8 @@ class OffScreenRenderWidgetHostView : public content::RenderWidgetHostViewBase,
   int frame_rate_ = 0;
   int frame_rate_threshold_us_ = 0;
 
+  float manual_device_scale_factor_;
+
   base::Time last_time_ = base::Time::Now();
 
   gfx::Vector2dF last_scroll_offset_;
