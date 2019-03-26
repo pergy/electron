@@ -81,7 +81,8 @@ class OffScreenRenderWidgetHostView : public content::RenderWidgetHostViewBase,
                                 const OnPaintCallback& callback,
                                 content::RenderWidgetHost* render_widget_host,
                                 OffScreenRenderWidgetHostView* parent_host_view,
-                                gfx::Size initial_size);
+                                gfx::Size initial_size,
+                                float scale_factor);
   ~OffScreenRenderWidgetHostView() override;
 
   content::BrowserAccessibilityManager* CreateBrowserAccessibilityManager(

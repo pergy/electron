@@ -358,7 +358,7 @@ WebContents::WebContents(v8::Isolate* isolate,
 #if BUILDFLAG(ENABLE_OSR)
     if (embedder_ && embedder_->IsOffScreen()) {
       auto* view = new OffScreenWebContentsView(
-          false, base::Bind(&WebContents::OnPaint, base::Unretained(this)));
+          false, 0.0f, base::Bind(&WebContents::OnPaint, base::Unretained(this)));
       params.view = view;
       params.delegate_view = view;
 
@@ -371,11 +371,14 @@ WebContents::WebContents(v8::Isolate* isolate,
     }
   } else if (IsOffScreen()) {
     bool transparent = false;
+    float scaleFactor = 0.0f;
     options.Get("transparent", &transparent);
+    options.Get("scaleFactor", &scaleFactor);
 
     content::WebContents::CreateParams params(session->browser_context());
     auto* view = new OffScreenWebContentsView(
-        transparent, base::Bind(&WebContents::OnPaint, base::Unretained(this)));
+        transparent, scaleFactor,
+        base::Bind(&WebContents::OnPaint, base::Unretained(this)));
     params.view = view;
     params.delegate_view = view;
 

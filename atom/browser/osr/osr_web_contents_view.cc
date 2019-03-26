@@ -14,8 +14,11 @@ namespace atom {
 
 OffScreenWebContentsView::OffScreenWebContentsView(
     bool transparent,
+    float scale_factor,
     const OnPaintCallback& callback)
-    : native_window_(nullptr), transparent_(transparent), callback_(callback) {
+    : native_window_(nullptr),
+      transparent_(transparent),
+      scale_factor_(scale_factor), callback_(callback) {
 #if defined(OS_MACOSX)
   PlatformCreate();
 #endif
@@ -124,7 +127,7 @@ OffScreenWebContentsView::CreateViewForWidget(
 
   return new OffScreenRenderWidgetHostView(
       transparent_, painting_, GetFrameRate(), callback_, render_widget_host,
-      nullptr, GetSize());
+      nullptr, GetSize(), scale_factor_);
 }
 
 content::RenderWidgetHostViewBase*
@@ -140,9 +143,9 @@ OffScreenWebContentsView::CreateViewForPopupWidget(
                     ->GetRenderWidgetHostView()
               : web_contents_impl->GetRenderWidgetHostView());
 
-  return new OffScreenRenderWidgetHostView(transparent_, true,
-                                           view->GetFrameRate(), callback_,
-                                           render_widget_host, view, GetSize());
+  return new OffScreenRenderWidgetHostView(
+      transparent_, true, view->GetFrameRate(), callback_, render_widget_host,
+      view, GetSize(), scale_factor_);
 }
 
 void OffScreenWebContentsView::SetPageTitle(const base::string16& title) {}
