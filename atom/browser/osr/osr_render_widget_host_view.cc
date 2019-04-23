@@ -1162,6 +1162,10 @@ void OffScreenRenderWidgetHostView::SetPainting(bool painting) {
   if (software_output_device_) {
     software_output_device_->SetActive(painting_, !paint_callback_running_);
   }
+
+  if (painting_) {
+    Invalidate();
+  }
 }
 
 bool OffScreenRenderWidgetHostView::IsPainting() const {
@@ -1235,7 +1239,8 @@ void OffScreenRenderWidgetHostView::SetupFrameRate(bool force) {
 }
 
 void OffScreenRenderWidgetHostView::Invalidate() {
-  InvalidateBounds(GetViewBounds());
+  InvalidateBounds(
+      gfx::ConvertRectToPixel(current_device_scale_factor_, GetViewBounds()));
 }
 
 void OffScreenRenderWidgetHostView::InvalidateBounds(const gfx::Rect& bounds) {
