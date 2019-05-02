@@ -1853,6 +1853,17 @@ int WebContents::GetFrameRate() const {
   auto* osr_wcv = GetOffScreenWebContentsView();
   return osr_wcv ? osr_wcv->GetFrameRate() : 0;
 }
+
+void WebContents::SetPixelScaleFactor(float pixel_scale_factor) {
+  auto* osr_wcv = GetOffScreenWebContentsView();
+  if (osr_wcv)
+    osr_wcv->SetPixelScaleFactor(pixel_scale_factor);
+}
+
+float WebContents::GetPixelScaleFactor() const {
+  auto* osr_wcv = GetOffScreenWebContentsView();
+  return osr_wcv ? osr_wcv->GetPixelScaleFactor() : 0.0f;
+}
 #endif
 
 void WebContents::Invalidate() {
@@ -2111,6 +2122,8 @@ void WebContents::BuildPrototype(v8::Isolate* isolate,
       .SetMethod("isPainting", &WebContents::IsPainting)
       .SetMethod("setFrameRate", &WebContents::SetFrameRate)
       .SetMethod("getFrameRate", &WebContents::GetFrameRate)
+      .SetMethod("setPixelScaleFactor", &WebContents::SetPixelScaleFactor)
+      .SetMethod("getPixelScaleFactor", &WebContents::GetPixelScaleFactor)
 #endif
       .SetMethod("invalidate", &WebContents::Invalidate)
       .SetMethod("setZoomLevel", &WebContents::SetZoomLevel)
