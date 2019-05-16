@@ -215,6 +215,9 @@ class OffScreenRenderWidgetHostView : public content::RenderWidgetHostViewBase,
   void SetFrameRate(int frame_rate);
   int GetFrameRate() const;
 
+  void SetPixelScaleFactor(float pixel_scale_factor);
+  float GetPixelScaleFactor() const;
+
   ui::Compositor* GetCompositor() const;
   ui::Layer* GetRootLayer() const;
 

@@ -219,6 +219,24 @@ int OffScreenWebContentsView::GetFrameRate() const {
   }
 }
 
+void OffScreenWebContentsView::SetPixelScaleFactor(float pixel_scale_factor) {
+  auto* view = GetView();
+  if (view != nullptr) {
+    view->SetPixelScaleFactor(pixel_scale_factor);
+  } else {
+    scale_factor_ = pixel_scale_factor;
+  }
+}
+
+float OffScreenWebContentsView::GetPixelScaleFactor() const {
+  auto* view = GetView();
+  if (view != nullptr) {
+    return view->GetPixelScaleFactor();
+  } else {
+    return scale_factor_;
+  }
+}
+
 OffScreenRenderWidgetHostView* OffScreenWebContentsView::GetView() const {
   if (web_contents_) {
     return static_cast<OffScreenRenderWidgetHostView*>(

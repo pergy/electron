@@ -85,6 +85,8 @@ class OffScreenWebContentsView : public content::WebContentsView,
   bool IsPainting() const;
   void SetFrameRate(int frame_rate);
   int GetFrameRate() const;
+  void SetPixelScaleFactor(float pixel_scale_factor);
+  float GetPixelScaleFactor() const;
 
  private:
 #if defined(OS_MACOSX)
