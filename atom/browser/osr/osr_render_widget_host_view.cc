@@ -50,7 +50,8 @@ namespace atom {
 
 namespace {
 
-const float kDefaultScaleFactor = 1.0;
+const float kDefaultScaleFactor = 1.0f;
+const float kAutoScaleFactor = 0.0f;
 
 ui::MouseEvent UiMouseEventFromWebMouseEvent(blink::WebMouseEvent event) {
   ui::EventType type = ui::EventType::ET_UNKNOWN;
@@ -205,7 +206,8 @@ OffScreenRenderWidgetHostView::OffScreenRenderWidgetHostView(
     const OnPaintCallback& callback,
     content::RenderWidgetHost* host,
     OffScreenRenderWidgetHostView* parent_host_view,
-    gfx::Size initial_size)
+    gfx::Size initial_size,
+    float scale_factor)
     : content::RenderWidgetHostViewBase(host),
       render_widget_host_(content::RenderWidgetHostImpl::From(host)),
       parent_host_view_(parent_host_view),
@@ -222,7 +224,10 @@ OffScreenRenderWidgetHostView::OffScreenRenderWidgetHostView(
   DCHECK(render_widget_host_);
   bool is_guest_view_hack = parent_host_view_ != nullptr;
 
-  current_device_scale_factor_ = kDefaultScaleFactor;
+  manual_device_scale_factor_ = scale_factor;
+  current_device_scale_factor_ = manual_device_scale_factor_ != kAutoScaleFactor
+                                     ? manual_device_scale_factor_
+                                     : kDefaultScaleFactor;
 
   delegated_frame_host_allocator_.GenerateId();
   delegated_frame_host_allocation_ =
@@ -645,7 +650,8 @@ OffScreenRenderWidgetHostView::CreateViewForWidget(
 
   return new OffScreenRenderWidgetHostView(
       transparent_, true, embedder_host_view->GetFrameRate(), callback_,
-      render_widget_host, embedder_host_view, size());
+      render_widget_host, embedder_host_view, size(),
+      current_device_scale_factor_);
 }
 
 const viz::FrameSinkId& OffScreenRenderWidgetHostView::GetFrameSinkId() const {
@@ -1103,13 +1109,14 @@ void OffScreenRenderWidgetHostView::InvalidateBounds(const gfx::Rect& bounds) {
 void OffScreenRenderWidgetHostView::ResizeRootLayer(bool force) {
   SetupFrameRate(false);
 
-  display::Display display =
-      display::Screen::GetScreen()->GetDisplayNearestView(GetNativeView());
-  const float scaleFactor = display.device_scale_factor();
-  const bool scaleFactorDidChange =
-      (scaleFactor != current_device_scale_factor_);
-
-  current_device_scale_factor_ = scaleFactor;
+  bool scaleFactorDidChange = false;
+  if (manual_device_scale_factor_ == kAutoScaleFactor) {
+    display::Display display =
+        display::Screen::GetScreen()->GetDisplayNearestView(GetNativeView());
+    const float scaleFactor = display.device_scale_factor();
+    scaleFactorDidChange = scaleFactor != current_device_scale_factor_;
+    current_device_scale_factor_ = scaleFactor;
+  }
 
   gfx::Size size;
   if (!IsPopupWidget())
