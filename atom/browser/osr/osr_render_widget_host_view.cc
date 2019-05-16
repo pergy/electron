@@ -1064,6 +1064,23 @@ int OffScreenRenderWidgetHostView::GetFrameRate() const {
   return frame_rate_;
 }
 
+void OffScreenRenderWidgetHostView::SetPixelScaleFactor(
+    float pixel_scale_factor) {
+  manual_device_scale_factor_ = pixel_scale_factor;
+  if (manual_device_scale_factor_ != kAutoScaleFactor) {
+    current_device_scale_factor_ = manual_device_scale_factor_;
+  } else {
+    display::Display display =
+        display::Screen::GetScreen()->GetDisplayNearestView(GetNativeView());
+    const float scaleFactor = display.device_scale_factor();
+    current_device_scale_factor_ = scaleFactor;
+  }
+}
+
+float OffScreenRenderWidgetHostView::GetPixelScaleFactor() const {
+  return current_device_scale_factor_;
+}
+
 ui::Compositor* OffScreenRenderWidgetHostView::GetCompositor() const {
   return compositor_.get();
 }
