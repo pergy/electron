@@ -356,7 +356,8 @@ WebContents::WebContents(v8::Isolate* isolate, const mate::Dictionary& options)
     if (embedder_ && embedder_->IsOffScreen()) {
       auto* view = new OffScreenWebContentsView(
           false, 0.0f,
-          base::Bind(&WebContents::OnPaint, base::Unretained(this)));
+          base::Bind(&WebContents::OnPaint, base::Unretained(this)),
+          base::Bind(&WebContents::OnCursorChange, base::Unretained(this)));
       params.view = view;
       params.delegate_view = view;
 
@@ -376,7 +377,8 @@ WebContents::WebContents(v8::Isolate* isolate, const mate::Dictionary& options)
     content::WebContents::CreateParams params(session->browser_context());
     auto* view = new OffScreenWebContentsView(
         transparent, scaleFactor,
-        base::Bind(&WebContents::OnPaint, base::Unretained(this)));
+        base::Bind(&WebContents::OnPaint, base::Unretained(this)),
+        base::Bind(&WebContents::OnCursorChange, base::Unretained(this)));
     params.view = view;
     params.delegate_view = view;
 
@@ -1152,17 +1154,6 @@ void WebContents::ShowAutofillPopup(content::RenderFrameHost* frame_host,
       frame_host, embedder_frame_host, offscreen, popup_bounds, values, labels);
 }
 #endif
-
-bool WebContents::OnMessageReceived(const IPC::Message& message) {
-  bool handled = true;
-  IPC_BEGIN_MESSAGE_MAP(WebContents, message)
-    IPC_MESSAGE_HANDLER_CODE(WidgetHostMsg_SetCursor, OnCursorChange,
-                             handled = false)
-    IPC_MESSAGE_UNHANDLED(handled = false)
-  IPC_END_MESSAGE_MAP()
-
-  return handled;
-}
 
 bool WebContents::OnMessageReceived(const IPC::Message& message,
                                     content::RenderFrameHost* frame_host) {

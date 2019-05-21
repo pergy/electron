@@ -23,13 +23,16 @@ class OffScreenView;
 
 namespace atom {
 
+typedef base::Callback<void(const content::WebCursor&)> OnCursorChangedCallback;
+
 class OffScreenWebContentsView : public content::WebContentsView,
                                  public content::RenderViewHostDelegateView,
                                  public NativeWindowObserver {
  public:
   OffScreenWebContentsView(bool transparent,
                            float scale_factor,
-                           const OnPaintCallback& callback);
+                           const OnPaintCallback& paint_cb,
+                           const OnCursorChangedCallback& cursor_change_cb);
   ~OffScreenWebContentsView() override;
 
   void SetWebContents(content::WebContents*);
@@ -102,7 +105,8 @@ class OffScreenWebContentsView : public content::WebContentsView,
   float scale_factor_;
   bool painting_ = true;
   int frame_rate_ = 60;
-  OnPaintCallback callback_;
+  OnPaintCallback paint_callback_;
+  OnCursorChangedCallback cursor_changed_callback_;
 
   // Weak refs.
   content::WebContents* web_contents_ = nullptr;
