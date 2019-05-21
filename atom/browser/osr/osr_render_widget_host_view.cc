@@ -1029,6 +1029,10 @@ void OffScreenRenderWidgetHostView::SetPainting(bool painting) {
   } else if (host_display_client_) {
     host_display_client_->SetActive(IsPainting());
   }
+
+  if (painting_) {
+    Invalidate();
+  }
 }
 
 bool OffScreenRenderWidgetHostView::IsPainting() const {
