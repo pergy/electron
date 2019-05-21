@@ -58,20 +58,23 @@ class AtomDelegatedFrameHostClient;
 
 typedef base::Callback<void(const gfx::Rect&, const SkBitmap&)> OnPaintCallback;
 typedef base::Callback<void(const gfx::Rect&)> OnPopupPaintCallback;
+typedef base::Callback<void(const content::WebCursor&)> OnCursorChangedCallback;
 
 class OffScreenRenderWidgetHostView : public content::RenderWidgetHostViewBase,
                                       public ui::ExternalBeginFrameClient,
                                       public ui::CompositorDelegate,
                                       public OffscreenViewProxyObserver {
  public:
-  OffScreenRenderWidgetHostView(bool transparent,
-                                bool painting,
-                                int frame_rate,
-                                const OnPaintCallback& callback,
-                                content::RenderWidgetHost* render_widget_host,
-                                OffScreenRenderWidgetHostView* parent_host_view,
-                                gfx::Size initial_size,
-                                float scale_factor);
+  OffScreenRenderWidgetHostView(
+      bool transparent,
+      bool painting,
+      int frame_rate,
+      const OnPaintCallback& paint_cb,
+      const OnCursorChangedCallback& cursor_changed_cb,
+      content::RenderWidgetHost* render_widget_host,
+      OffScreenRenderWidgetHostView* parent_host_view,
+      gfx::Size initial_size,
+      float scale_factor);
   ~OffScreenRenderWidgetHostView() override;
 
   content::BrowserAccessibilityManager* CreateBrowserAccessibilityManager(
@@ -261,7 +264,8 @@ class OffScreenRenderWidgetHostView : public content::RenderWidgetHostViewBase,
   std::set<OffscreenViewProxy*> proxy_views_;
 
   const bool transparent_;
-  OnPaintCallback callback_;
+  OnPaintCallback paint_callback_;
+  OnCursorChangedCallback cursor_changed_callback_;
   OnPopupPaintCallback parent_callback_;
 
   int frame_rate_ = 0;
