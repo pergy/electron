@@ -125,7 +125,7 @@ class AtomBeginFrameTimer : public viz::DelayBasedTimeSourceClient {
  public:
   AtomBeginFrameTimer(int frame_rate_threshold_us,
                       const base::Closure& callback)
-      : callback_(callback) {
+      : paint_callback_(callback) {
     time_source_.reset(new viz::DelayBasedTimeSource(
         base::CreateSingleThreadTaskRunnerWithTraits(
             {content::BrowserThread::UI})
@@ -147,9 +147,9 @@ class AtomBeginFrameTimer : public viz::DelayBasedTimeSourceClient {
   }
 
  private:
-  void OnTimerTick() override { callback_.Run(); }
+  void OnTimerTick() override { paint_callback_.Run(); }
 
-  const base::Closure callback_;
+  const base::Closure paint_callback_;
   std::unique_ptr<viz::DelayBasedTimeSource> time_source_;
 
   DISALLOW_COPY_AND_ASSIGN(AtomBeginFrameTimer);
@@ -203,7 +203,8 @@ OffScreenRenderWidgetHostView::OffScreenRenderWidgetHostView(
     bool transparent,
     bool painting,
     int frame_rate,
-    const OnPaintCallback& callback,
+    const OnPaintCallback& paint_cb,
+    const OnCursorChangedCallback& cursor_changed_cb,
     content::RenderWidgetHost* host,
     OffScreenRenderWidgetHostView* parent_host_view,
     gfx::Size initial_size,
@@ -212,7 +213,8 @@ OffScreenRenderWidgetHostView::OffScreenRenderWidgetHostView(
       render_widget_host_(content::RenderWidgetHostImpl::From(host)),
       parent_host_view_(parent_host_view),
       transparent_(transparent),
-      callback_(callback),
+      paint_callback_(paint_cb),
+      cursor_changed_callback_(cursor_changed_cb),
       frame_rate_(frame_rate),
       size_(initial_size),
       painting_(painting),
@@ -524,7 +526,12 @@ void OffScreenRenderWidgetHostView::InitAsPopup(
 void OffScreenRenderWidgetHostView::InitAsFullscreen(
     content::RenderWidgetHostView*) {}
 
-void OffScreenRenderWidgetHostView::UpdateCursor(const content::WebCursor&) {}
+void OffScreenRenderWidgetHostView::UpdateCursor(
+    const content::WebCursor& cursor) {
+  if (cursor_changed_callback_) {
+    cursor_changed_callback_.Run(cursor);
+  }
+}
 
 content::CursorManager* OffScreenRenderWidgetHostView::GetCursorManager() {
   return cursor_manager_.get();
@@ -649,8 +656,8 @@ OffScreenRenderWidgetHostView::CreateViewForWidget(
   }
 
   return new OffScreenRenderWidgetHostView(
-      transparent_, true, embedder_host_view->GetFrameRate(), callback_,
-      render_widget_host, embedder_host_view, size(),
+      transparent_, true, embedder_host_view->GetFrameRate(), paint_callback_,
+      cursor_changed_callback_, render_widget_host, embedder_host_view, size(),
       current_device_scale_factor_);
 }
 
@@ -845,8 +852,8 @@ void OffScreenRenderWidgetHostView::CompositeFrame(
   }
 
   paint_callback_running_ = true;
-  callback_.Run(gfx::IntersectRects(gfx::Rect(size_in_pixels), damage_rect),
-                frame);
+  paint_callback_.Run(
+      gfx::IntersectRects(gfx::Rect(size_in_pixels), damage_rect), frame);
   paint_callback_running_ = false;
 
   ReleaseResize();
@@ -1120,8 +1127,7 @@ void OffScreenRenderWidgetHostView::SetupFrameRate(bool force) {
 }
 
 void OffScreenRenderWidgetHostView::Invalidate() {
-  InvalidateBounds(
-      gfx::ConvertRectToPixel(current_device_scale_factor_, GetViewBounds()));
+  InvalidateBounds(gfx::Rect(SizeInPixels()));
 }
 
 void OffScreenRenderWidgetHostView::InvalidateBounds(const gfx::Rect& bounds) {
