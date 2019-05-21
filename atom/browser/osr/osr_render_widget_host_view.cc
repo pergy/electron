@@ -1120,7 +1120,8 @@ void OffScreenRenderWidgetHostView::SetupFrameRate(bool force) {
 }
 
 void OffScreenRenderWidgetHostView::Invalidate() {
-  InvalidateBounds(gfx::Rect(GetRequestedRendererSize()));
+  InvalidateBounds(
+      gfx::ConvertRectToPixel(current_device_scale_factor_, GetViewBounds()));
 }
 
 void OffScreenRenderWidgetHostView::InvalidateBounds(const gfx::Rect& bounds) {
