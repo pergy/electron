@@ -871,12 +871,12 @@ void OffScreenRenderWidgetHostView::CompositeFrame(
 }
 
 void OffScreenRenderWidgetHostView::OnPopupPaint(const gfx::Rect& damage_rect) {
-  CompositeFrame(gfx::Rect(SizeInPixels()));
+  InvalidateBounds(gfx::Rect(SizeInPixels()));
 }
 
 void OffScreenRenderWidgetHostView::OnProxyViewPaint(
     const gfx::Rect& damage_rect) {
-  CompositeFrame(gfx::Rect(SizeInPixels()));
+  InvalidateBounds(gfx::Rect(SizeInPixels()));
 }
 
 void OffScreenRenderWidgetHostView::HoldResize() {
@@ -1137,7 +1137,15 @@ void OffScreenRenderWidgetHostView::SetupFrameRate(bool force) {
 }
 
 void OffScreenRenderWidgetHostView::Invalidate() {
+  InvalidateBounds(gfx::Rect(SizeInPixels()));
   GetCompositor()->ScheduleFullRedraw();
+}
+
+void OffScreenRenderWidgetHostView::InvalidateBounds(const gfx::Rect& bounds) {
+  if (host_display_client_) {
+    OnPaintPixels(bounds, host_display_client_->GetPixelInfo(),
+                  host_display_client_->GetPixelMemory());
+  }
 }
 
 void OffScreenRenderWidgetHostView::ResizeRootLayer(bool force) {
