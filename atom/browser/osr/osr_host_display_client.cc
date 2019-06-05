@@ -24,7 +24,7 @@ namespace atom {
 
 LayeredWindowUpdater::LayeredWindowUpdater(
     viz::mojom::LayeredWindowUpdaterRequest request,
-    OnPaintCallback callback)
+    OnRWHVPaintCallback callback)
     : callback_(callback), binding_(this, std::move(request)) {}
 
 LayeredWindowUpdater::~LayeredWindowUpdater() = default;
@@ -33,11 +33,17 @@ void LayeredWindowUpdater::SetActive(bool active) {
   active_ = active;
 }
 
+const void* LayeredWindowUpdater::GetPixelMemory() const {
+  return shared_memory_.memory();
+}
+
+SkImageInfo LayeredWindowUpdater::GetPixelInfo() const {
+  return pixel_info_;
+}
+
 void LayeredWindowUpdater::OnAllocatedSharedMemory(
     const gfx::Size& pixel_size,
     mojo::ScopedSharedBufferHandle scoped_buffer_handle) {
-  canvas_.reset();
-
   // Make sure |pixel_size| is sane.
   size_t expected_bytes;
   bool size_result = viz::ResourceSizes::MaybeSizeInBytes(
@@ -47,49 +53,40 @@ void LayeredWindowUpdater::OnAllocatedSharedMemory(
 
 #if defined(WIN32)
   base::SharedMemoryHandle shm_handle;
-  size_t required_bytes;
   MojoResult unwrap_result = mojo::UnwrapSharedMemoryHandle(
-      std::move(scoped_buffer_handle), &shm_handle, &required_bytes, nullptr);
+      std::move(scoped_buffer_handle), &shm_handle, nullptr, nullptr);
   if (unwrap_result != MOJO_RESULT_OK)
     return;
-
-  base::SharedMemory shm(shm_handle, false);
-  if (!shm.Map(required_bytes)) {
-    DLOG(ERROR) << "Failed to map " << required_bytes << " bytes";
-    return;
-  }
-
-  canvas_ = skia::CreatePlatformCanvasWithSharedSection(
-      pixel_size.width(), pixel_size.height(), false, shm.handle().GetHandle(),
-      skia::CRASH_ON_FAILURE);
+  base::WritableSharedMemoryRegion shm =
+      base::WritableSharedMemoryRegion::Deserialize(
+          base::subtle::PlatformSharedMemoryRegion::Take(
+              base::win::ScopedHandle(shm_handle.GetHandle()),
+              base::subtle::PlatformSharedMemoryRegion::Mode::kWritable,
+              shm_handle.GetSize(), shm_handle.GetGUID()));
 #else
-  auto shm =
+  base::WritableSharedMemoryRegion shm =
       mojo::UnwrapWritableSharedMemoryRegion(std::move(scoped_buffer_handle));
   if (!shm.IsValid()) {
     DLOG(ERROR) << "Failed to unwrap shared memory region";
     return;
   }
-
-  shm_mapping_ = shm.Map();
-  if (!shm_mapping_.IsValid()) {
-    DLOG(ERROR) << "Failed to map shared memory region";
+#endif
+  pixel_info_ = SkImageInfo::MakeN32(pixel_size.width(), pixel_size.height(),
+                                     kPremul_SkAlphaType);
+  shared_memory_ = shm.Map();
+  if (!shared_memory_.IsValid()) {
+    DLOG(ERROR) << "Failed to map shared memory";
     return;
   }
-
-  canvas_ = skia::CreatePlatformCanvasWithPixels(
-      pixel_size.width(), pixel_size.height(), false,
-      static_cast<uint8_t*>(shm_mapping_.memory()), skia::CRASH_ON_FAILURE);
-#endif
 }
 
 void LayeredWindowUpdater::Draw(const gfx::Rect& damage_rect,
                                 DrawCallback draw_callback) {
-  SkPixmap pixmap;
-  SkBitmap bitmap;
-
-  if (active_ && canvas_->peekPixels(&pixmap)) {
-    bitmap.installPixels(pixmap);
-    callback_.Run(damage_rect, bitmap);
+  if (active_) {
+    const void* memory = GetPixelMemory();
+    if (memory) {
+      callback_.Run(damage_rect, pixel_info_, memory);
+    }  // else log warn
   }
 
   std::move(draw_callback).Run();
@@ -97,7 +94,7 @@ void LayeredWindowUpdater::Draw(const gfx::Rect& damage_rect,
 
 OffScreenHostDisplayClient::OffScreenHostDisplayClient(
     gfx::AcceleratedWidget widget,
-    OnPaintCallback callback)
+    OnRWHVPaintCallback callback)
     : viz::HostDisplayClient(widget), callback_(callback) {}
 OffScreenHostDisplayClient::~OffScreenHostDisplayClient() {}
 
@@ -106,6 +103,16 @@ void OffScreenHostDisplayClient::SetActive(bool active) {
   if (layered_window_updater_) {
     layered_window_updater_->SetActive(active_);
   }
+}
+
+const void* OffScreenHostDisplayClient::GetPixelMemory() const {
+  return layered_window_updater_ ? layered_window_updater_->GetPixelMemory()
+                                 : nullptr;
+}
+
+SkImageInfo OffScreenHostDisplayClient::GetPixelInfo() const {
+  return layered_window_updater_ ? layered_window_updater_->GetPixelInfo()
+                                 : SkImageInfo{};
 }
 
 void OffScreenHostDisplayClient::IsOffscreen(IsOffscreenCallback callback) {

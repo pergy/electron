@@ -191,7 +191,10 @@ class OffScreenRenderWidgetHostView : public content::RenderWidgetHostViewBase,
   void RemoveViewProxy(OffscreenViewProxy* proxy);
   void ProxyViewDestroyed(OffscreenViewProxy* proxy) override;
 
-  void OnPaint(const gfx::Rect& damage_rect, const SkBitmap& bitmap);
+  void OnPaintPixels(const gfx::Rect& damage_rect,
+                     const SkImageInfo& info,
+                     const void* pixels);
+  void OnPaintBitmap(const gfx::Rect& damage_rect, const SkBitmap& bitmap);
   void OnPopupPaint(const gfx::Rect& damage_rect);
   void OnProxyViewPaint(const gfx::Rect& damage_rect) override;
 

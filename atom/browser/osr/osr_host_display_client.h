@@ -17,15 +17,18 @@
 
 namespace atom {
 
-typedef base::Callback<void(const gfx::Rect&, const SkBitmap&)> OnPaintCallback;
+typedef base::Callback<void(const gfx::Rect&, const SkImageInfo&, const void*)>
+    OnRWHVPaintCallback;
 
 class LayeredWindowUpdater : public viz::mojom::LayeredWindowUpdater {
  public:
   explicit LayeredWindowUpdater(viz::mojom::LayeredWindowUpdaterRequest request,
-                                OnPaintCallback callback);
+                                OnRWHVPaintCallback callback);
   ~LayeredWindowUpdater() override;
 
   void SetActive(bool active);
+  const void* GetPixelMemory() const;
+  SkImageInfo GetPixelInfo() const;
 
   // viz::mojom::LayeredWindowUpdater implementation.
   void OnAllocatedSharedMemory(
@@ -34,14 +37,11 @@ class LayeredWindowUpdater : public viz::mojom::LayeredWindowUpdater {
   void Draw(const gfx::Rect& damage_rect, DrawCallback draw_callback) override;
 
  private:
-  OnPaintCallback callback_;
+  OnRWHVPaintCallback callback_;
   mojo::Binding<viz::mojom::LayeredWindowUpdater> binding_;
-  std::unique_ptr<SkCanvas> canvas_;
   bool active_ = false;
-
-#if !defined(WIN32)
-  base::WritableSharedMemoryMapping shm_mapping_;
-#endif
+  base::WritableSharedMemoryMapping shared_memory_;
+  SkImageInfo pixel_info_;
 
   DISALLOW_COPY_AND_ASSIGN(LayeredWindowUpdater);
 };
@@ -49,10 +49,14 @@ class LayeredWindowUpdater : public viz::mojom::LayeredWindowUpdater {
 class OffScreenHostDisplayClient : public viz::HostDisplayClient {
  public:
   explicit OffScreenHostDisplayClient(gfx::AcceleratedWidget widget,
-                                      OnPaintCallback callback);
+                                      OnRWHVPaintCallback callback);
   ~OffScreenHostDisplayClient() override;
 
   void SetActive(bool active);
+  // Theses are accesible from osr_rwhv, but currently unused (bc invalidate
+  // requests redraw)
+  const void* GetPixelMemory() const;
+  SkImageInfo GetPixelInfo() const;
 
  private:
   void IsOffscreen(IsOffscreenCallback callback) override;
@@ -66,7 +70,7 @@ class OffScreenHostDisplayClient : public viz::HostDisplayClient {
       viz::mojom::LayeredWindowUpdaterRequest request) override;
 
   std::unique_ptr<LayeredWindowUpdater> layered_window_updater_;
-  OnPaintCallback callback_;
+  OnRWHVPaintCallback callback_;
   bool active_ = false;
 
   DISALLOW_COPY_AND_ASSIGN(OffScreenHostDisplayClient);

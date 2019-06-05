@@ -272,7 +272,7 @@ OffScreenRenderWidgetHostView::OffScreenRenderWidgetHostView(
 
   if (content::GpuDataManager::GetInstance()->HardwareAccelerationEnabled()) {
     video_consumer_.reset(new OffScreenVideoConsumer(
-        this, base::Bind(&OffScreenRenderWidgetHostView::OnPaint,
+        this, base::Bind(&OffScreenRenderWidgetHostView::OnPaintBitmap,
                          weak_ptr_factory_.GetWeakPtr())));
     video_consumer_->SetActive(IsPainting());
     video_consumer_->SetFrameRate(GetFrameRate());
@@ -754,7 +754,7 @@ OffScreenRenderWidgetHostView::CreateHostDisplayClient(
     ui::Compositor* compositor) {
   host_display_client_ = new OffScreenHostDisplayClient(
       gfx::kNullAcceleratedWidget,
-      base::Bind(&OffScreenRenderWidgetHostView::OnPaint,
+      base::Bind(&OffScreenRenderWidgetHostView::OnPaintPixels,
                  weak_ptr_factory_.GetWeakPtr()));
   host_display_client_->SetActive(IsPainting());
   return base::WrapUnique(host_display_client_);
@@ -789,8 +789,22 @@ bool OffScreenRenderWidgetHostView::UpdateNSViewAndDisplay() {
 }
 #endif
 
-void OffScreenRenderWidgetHostView::OnPaint(const gfx::Rect& damage_rect,
-                                            const SkBitmap& bitmap) {
+void OffScreenRenderWidgetHostView::OnPaintPixels(const gfx::Rect& damage_rect,
+                                                  const SkImageInfo& info,
+                                                  const void* pixels) {
+  backing_.reset(new SkBitmap());
+  backing_->allocN32Pixels(info.width(), info.height(), !transparent_);
+  backing_->installPixels(info, const_cast<void*>(pixels), info.minRowBytes());
+
+  if (IsPopupWidget() && parent_callback_) {
+    parent_callback_.Run(this->popup_position_);
+  } else {
+    CompositeFrame(damage_rect);
+  }
+}
+
+void OffScreenRenderWidgetHostView::OnPaintBitmap(const gfx::Rect& damage_rect,
+                                                  const SkBitmap& bitmap) {
   backing_.reset(new SkBitmap());
   backing_->allocN32Pixels(bitmap.width(), bitmap.height(), !transparent_);
   bitmap.readPixels(backing_->pixmap());
@@ -857,14 +871,12 @@ void OffScreenRenderWidgetHostView::CompositeFrame(
 }
 
 void OffScreenRenderWidgetHostView::OnPopupPaint(const gfx::Rect& damage_rect) {
-  CompositeFrame(
-      gfx::ConvertRectToPixel(current_device_scale_factor_, damage_rect));
+  CompositeFrame(gfx::Rect(SizeInPixels()));
 }
 
 void OffScreenRenderWidgetHostView::OnProxyViewPaint(
     const gfx::Rect& damage_rect) {
-  CompositeFrame(
-      gfx::ConvertRectToPixel(current_device_scale_factor_, damage_rect));
+  CompositeFrame(gfx::Rect(SizeInPixels()));
 }
 
 void OffScreenRenderWidgetHostView::HoldResize() {
@@ -1019,6 +1031,7 @@ void OffScreenRenderWidgetHostView::SendMouseWheelEvent(
 }
 
 void OffScreenRenderWidgetHostView::SetPainting(bool painting) {
+  bool juststarted = !painting_ && painting;
   painting_ = painting;
 
   if (popup_host_view_) {
@@ -1034,7 +1047,7 @@ void OffScreenRenderWidgetHostView::SetPainting(bool painting) {
     host_display_client_->SetActive(IsPainting());
   }
 
-  if (painting_) {
+  if (juststarted) {
     Invalidate();
   }
 }
