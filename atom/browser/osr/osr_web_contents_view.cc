@@ -131,7 +131,7 @@ OffScreenWebContentsView::CreateViewForWidget(
   return new OffScreenRenderWidgetHostView(
       transparent_, painting_, GetFrameRate(), paint_callback_,
       cursor_changed_callback_, render_widget_host, nullptr, GetSize(),
-      scale_factor_);
+      GetPixelScaleFactor());
 }
 
 content::RenderWidgetHostViewBase*
@@ -150,7 +150,7 @@ OffScreenWebContentsView::CreateViewForChildWidget(
   return new OffScreenRenderWidgetHostView(
       transparent_, true, view->GetFrameRate(), paint_callback_,
       cursor_changed_callback_, render_widget_host, view, GetSize(),
-      scale_factor_);
+      GetPixelScaleFactor());
 }
 
 void OffScreenWebContentsView::SetPageTitle(const base::string16& title) {}
