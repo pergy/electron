@@ -227,7 +227,6 @@ class OffScreenRenderWidgetHostView : public content::RenderWidgetHostViewBase,
   content::DelegatedFrameHost* GetDelegatedFrameHost() const;
 
   void Invalidate();
-  void InvalidateBounds(const gfx::Rect&);
 
   content::RenderWidgetHostImpl* render_widget_host() const {
     return render_widget_host_;
