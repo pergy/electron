@@ -18,12 +18,14 @@
 namespace atom {
 
 typedef base::Callback<void(const gfx::Rect&, const SkImageInfo&, const void*)>
-    OnRWHVPaintCallback;
+    OnRWHVPaintPixelsCallback;
+typedef base::Callback<void(const gfx::Rect&, const SkBitmap&)>
+    OnRWHVPaintBitmapCallback;
 
 class LayeredWindowUpdater : public viz::mojom::LayeredWindowUpdater {
  public:
   explicit LayeredWindowUpdater(viz::mojom::LayeredWindowUpdaterRequest request,
-                                OnRWHVPaintCallback callback);
+                                OnRWHVPaintPixelsCallback callback);
   ~LayeredWindowUpdater() override;
 
   void SetActive(bool active);
@@ -37,7 +39,7 @@ class LayeredWindowUpdater : public viz::mojom::LayeredWindowUpdater {
   void Draw(const gfx::Rect& damage_rect, DrawCallback draw_callback) override;
 
  private:
-  OnRWHVPaintCallback callback_;
+  OnRWHVPaintPixelsCallback callback_;
   mojo::Binding<viz::mojom::LayeredWindowUpdater> binding_;
   bool active_ = false;
   base::WritableSharedMemoryMapping shared_memory_;
@@ -48,8 +50,10 @@ class LayeredWindowUpdater : public viz::mojom::LayeredWindowUpdater {
 
 class OffScreenHostDisplayClient : public viz::HostDisplayClient {
  public:
-  explicit OffScreenHostDisplayClient(gfx::AcceleratedWidget widget,
-                                      OnRWHVPaintCallback callback);
+  explicit OffScreenHostDisplayClient(
+      gfx::AcceleratedWidget widget,
+      OnRWHVPaintPixelsCallback callback_pixels,
+      OnRWHVPaintBitmapCallback callback_bitmap);
   ~OffScreenHostDisplayClient() override;
 
   void SetActive(bool active);
@@ -70,7 +74,8 @@ class OffScreenHostDisplayClient : public viz::HostDisplayClient {
       viz::mojom::LayeredWindowUpdaterRequest request) override;
 
   std::unique_ptr<LayeredWindowUpdater> layered_window_updater_;
-  OnRWHVPaintCallback callback_;
+  OnRWHVPaintPixelsCallback callback_pixels_;
+  OnRWHVPaintBitmapCallback callback_bitmap_;
   bool active_ = false;
 
   DISALLOW_COPY_AND_ASSIGN(OffScreenHostDisplayClient);

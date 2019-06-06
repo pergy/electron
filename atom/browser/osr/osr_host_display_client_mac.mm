@@ -28,7 +28,7 @@ void OffScreenHostDisplayClient::OnDisplayReceivedCALayerParams(
                              kPremul_SkAlphaType),
         pixels, stride);
     bitmap.setImmutable();
-    callback_.Run(ca_layer_params.damage, bitmap);
+    callback_bitmap_.Run(ca_layer_params.damage, bitmap);
   }
 }
 
