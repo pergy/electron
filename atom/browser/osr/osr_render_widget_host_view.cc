@@ -755,6 +755,8 @@ OffScreenRenderWidgetHostView::CreateHostDisplayClient(
   host_display_client_ = new OffScreenHostDisplayClient(
       gfx::kNullAcceleratedWidget,
       base::Bind(&OffScreenRenderWidgetHostView::OnPaintPixels,
+                 weak_ptr_factory_.GetWeakPtr()),
+      base::Bind(&OffScreenRenderWidgetHostView::OnPaintBitmap,
                  weak_ptr_factory_.GetWeakPtr()));
   host_display_client_->SetActive(IsPainting());
   return base::WrapUnique(host_display_client_);

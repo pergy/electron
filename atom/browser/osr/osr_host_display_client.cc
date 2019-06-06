@@ -24,7 +24,7 @@ namespace atom {
 
 LayeredWindowUpdater::LayeredWindowUpdater(
     viz::mojom::LayeredWindowUpdaterRequest request,
-    OnRWHVPaintCallback callback)
+    OnRWHVPaintPixelsCallback callback)
     : callback_(callback), binding_(this, std::move(request)) {}
 
 LayeredWindowUpdater::~LayeredWindowUpdater() = default;
@@ -94,8 +94,11 @@ void LayeredWindowUpdater::Draw(const gfx::Rect& damage_rect,
 
 OffScreenHostDisplayClient::OffScreenHostDisplayClient(
     gfx::AcceleratedWidget widget,
-    OnRWHVPaintCallback callback)
-    : viz::HostDisplayClient(widget), callback_(callback) {}
+    OnRWHVPaintPixelsCallback callback_pixels,
+    OnRWHVPaintBitmapCallback callback_bitmap)
+    : viz::HostDisplayClient(widget),
+      callback_pixels_(callback_pixels),
+      callback_bitmap_(callback_bitmap) {}
 OffScreenHostDisplayClient::~OffScreenHostDisplayClient() {}
 
 void OffScreenHostDisplayClient::SetActive(bool active) {
@@ -121,8 +124,8 @@ void OffScreenHostDisplayClient::IsOffscreen(IsOffscreenCallback callback) {
 
 void OffScreenHostDisplayClient::CreateLayeredWindowUpdater(
     viz::mojom::LayeredWindowUpdaterRequest request) {
-  layered_window_updater_ =
-      std::make_unique<LayeredWindowUpdater>(std::move(request), callback_);
+  layered_window_updater_ = std::make_unique<LayeredWindowUpdater>(
+      std::move(request), callback_pixels_);
   layered_window_updater_->SetActive(active_);
 }
 
