@@ -1,0 +1,84 @@
+From 59b1ed4a60fc9cf57c3914eb4851ec94c8df21a9 Mon Sep 17 00:00:00 2001
+From: Shahbaz Youssefi <syoussefi@chromium.org>
+Date: Thu, 24 Jan 2019 13:55:17 -0500
+Subject: [PATCH] Clean up generated object_tracker.h
+
+This file was generated on the trybots dry-running a change that rolls
+the vulkan repos [1].  This is causing a build failure on other CLs.
+
+[1] https://chromium-review.googlesource.com/c/angle/angle/+/1405714
+
+Bug: 925077
+Change-Id: I3101a4a3fdeb7c38ac5cfe6a1d621e03a9f49071
+Reviewed-on: https://chromium-review.googlesource.com/c/1435154
+Commit-Queue: Shahbaz Youssefi <syoussefi@chromium.org>
+Reviewed-by: Yuly Novikov <ynovikov@chromium.org>
+---
+ third_party/vulkan-validation-layers/BUILD.gn | 30 +++++++++++++++++++++++----
+ 1 file changed, 26 insertions(+), 4 deletions(-)
+
+diff --git a/third_party/vulkan-validation-layers/BUILD.gn b/third_party/vulkan-validation-layers/BUILD.gn
+index de71a71ca..6d094ec71 100644
+--- a/third_party/vulkan-validation-layers/BUILD.gn
++++ b/third_party/vulkan-validation-layers/BUILD.gn
+@@ -295,7 +295,7 @@ layers = [
+   [
+     "object_tracker",
+     object_tracker_sources,
+-    ":vulkan_gen_object_tracker_cpp",
++    ":vulkan_gen_object_tracker",
+   ],
+   [
+     "parameter_validation",
+@@ -392,9 +392,9 @@ config("vulkan_parameter_validation_config") {
+   }
+ }
+ 
+-# This special action is needed to remove the generated param header.
+-# Otherwise the param gen cpp file will pick up the old file and the
+-# build will fail. It's a bit unfortunate but necessary.
++# These special "clean" actions are needed to remove generated headers.
++# Otherwise the cpp files will pick up the old generated files
++# and the build will fail. It's a bit unfortunate but necessary.
+ action("vulkan_clean_parameter_gen_header") {
+   script = "$angle_root/scripts/remove_file_if_exists.py"
+   inputs = parameter_validation_sources
+@@ -410,6 +410,21 @@ action("vulkan_clean_parameter_gen_header") {
+   ]
+ }
+ 
++action("vulkan_clean_tracker_gen_header") {
++  script = "$angle_root/scripts/remove_file_if_exists.py"
++  inputs = object_tracker_sources
++  deps = [
++    ":vulkan_gen_object_tracker_cpp",
++  ]
++  outputs = [
++    "$vulkan_gen_dir/object_tracker_h_is_removed",
++  ]
++  args = [
++    "$raw_vulkan_gen_dir/object_tracker.h",
++    "$raw_vulkan_gen_dir/object_tracker_h_is_removed",
++  ]
++}
++
+ source_set("vulkan_gen_parameter_validation") {
+   deps = [
+     ":vulkan_clean_parameter_gen_header",
+@@ -418,6 +433,13 @@ source_set("vulkan_gen_parameter_validation") {
+   public_configs = [ ":vulkan_parameter_validation_config" ]
+ }
+ 
++source_set("vulkan_gen_object_tracker") {
++  deps = [
++    ":vulkan_clean_tracker_gen_header",
++    ":vulkan_gen_object_tracker_cpp",
++  ]
++}
++
+ foreach(layer_info, layers) {
+   name = layer_info[0]
+   shared_library("VkLayer_$name") {
+-- 
+2.15.1.windows.2
+
