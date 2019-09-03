@@ -57,10 +57,6 @@ class OffScreenHostDisplayClient : public viz::HostDisplayClient {
   ~OffScreenHostDisplayClient() override;
 
   void SetActive(bool active);
-  // Theses are accesible from osr_rwhv, but currently unused (bc invalidate
-  // requests redraw)
-  const void* GetPixelMemory() const;
-  SkImageInfo GetPixelInfo() const;
 
  private:
   void IsOffscreen(IsOffscreenCallback callback) override;
