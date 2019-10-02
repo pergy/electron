@@ -23,6 +23,7 @@
 #include "content/browser/renderer_host/cursor_manager.h"  // nogncheck
 #include "content/browser/renderer_host/input/synthetic_gesture_target.h"  // nogncheck
 #include "content/browser/renderer_host/render_widget_host_delegate.h"  // nogncheck
+#include "content/browser/renderer_host/render_widget_host_input_event_router.h"
 #include "content/browser/renderer_host/render_widget_host_owner_delegate.h"  // nogncheck
 #include "content/common/view_messages.h"
 #include "content/public/browser/browser_task_traits.h"
@@ -275,6 +276,14 @@ OffScreenRenderWidgetHostView::OffScreenRenderWidgetHostView(
                          weak_ptr_factory_.GetWeakPtr())));
     video_consumer_->SetActive(IsPainting());
     video_consumer_->SetFrameRate(GetFrameRate());
+  }
+
+  // Let the page-level input event router know about our surface ID
+  // namespace for surface-based hit testing.
+  if (render_widget_host_->delegate() &&
+      render_widget_host_->delegate()->GetInputEventRouter()) {
+    render_widget_host_->delegate()->GetInputEventRouter()->AddFrameSinkIdOwner(
+        GetFrameSinkId(), this);
   }
 }
 
@@ -663,6 +672,10 @@ OffScreenRenderWidgetHostView::CreateViewForWidget(
 
 const viz::FrameSinkId& OffScreenRenderWidgetHostView::GetFrameSinkId() const {
   return GetDelegatedFrameHost()->frame_sink_id();
+}
+
+viz::FrameSinkId OffScreenRenderWidgetHostView::GetRootFrameSinkId() {
+  return GetCompositor()->frame_sink_id();
 }
 
 void OffScreenRenderWidgetHostView::DidNavigate() {

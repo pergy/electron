@@ -163,6 +163,7 @@ class OffScreenRenderWidgetHostView : public content::RenderWidgetHostViewBase,
   const viz::LocalSurfaceIdAllocation& GetLocalSurfaceIdAllocation()
       const override;
   const viz::FrameSinkId& GetFrameSinkId() const override;
+  viz::FrameSinkId GetRootFrameSinkId() override;
 
   void DidNavigate() override;
 
