@@ -107,6 +107,16 @@ void OffScreenHostDisplayClient::SetActive(bool active) {
   }
 }
 
+const void* OffScreenHostDisplayClient::GetPixelMemory() const {
+  return layered_window_updater_ ? layered_window_updater_->GetPixelMemory()
+                                 : nullptr;
+}
+
+SkImageInfo OffScreenHostDisplayClient::GetPixelInfo() const {
+  return layered_window_updater_ ? layered_window_updater_->GetPixelInfo()
+                                 : SkImageInfo{};
+}
+
 void OffScreenHostDisplayClient::IsOffscreen(IsOffscreenCallback callback) {
   std::move(callback).Run(true);
 }
