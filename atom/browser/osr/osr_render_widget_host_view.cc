@@ -1160,7 +1160,10 @@ void OffScreenRenderWidgetHostView::Invalidate() {
 }
 
 void OffScreenRenderWidgetHostView::InvalidateBounds(const gfx::Rect& bounds) {
-  CompositeFrame(bounds);
+  if (host_display_client_) {
+    OnPaintPixels(bounds, host_display_client_->GetPixelInfo(),
+                  host_display_client_->GetPixelMemory());
+  }
 }
 
 void OffScreenRenderWidgetHostView::ResizeRootLayer(bool force) {
