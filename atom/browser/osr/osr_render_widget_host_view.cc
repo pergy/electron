@@ -1163,6 +1163,8 @@ void OffScreenRenderWidgetHostView::InvalidateBounds(const gfx::Rect& bounds) {
   if (host_display_client_) {
     OnPaintPixels(bounds, host_display_client_->GetPixelInfo(),
                   host_display_client_->GetPixelMemory());
+  } else {
+    CompositeFrame(bounds);
   }
 }
 
