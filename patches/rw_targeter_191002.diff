@@ -1,0 +1,41 @@
+ content/browser/renderer_host/render_widget_targeter.cc | 16 ----------------
+ 1 file changed, 16 deletions(-)
+
+diff --git a/content/browser/renderer_host/render_widget_targeter.cc b/content/browser/renderer_host/render_widget_targeter.cc
+index 69d4971a8336..a176f724fd99 100644
+--- a/content/browser/renderer_host/render_widget_targeter.cc
++++ b/content/browser/renderer_host/render_widget_targeter.cc
+@@ -167,15 +167,10 @@ void RenderWidgetTargeter::FindTargetAndDispatch(
+     return;
+   }
+ 
+-  RenderWidgetTargetResult result =
+-      delegate_->FindTargetSynchronously(root_view, event);
+-
+   const gfx::PointF event_location = ComputeEventLocation(event);
+ 
+-  RenderWidgetHostViewBase* target = result.view;
+   auto* event_ptr = &event;
+   async_depth_ = 0;
+-  if (result.should_query_view) {
+     TRACE_EVENT_WITH_FLOW2(
+         "viz,benchmark", "Event.Pipeline", TRACE_ID_GLOBAL(trace_id_),
+         TRACE_EVENT_FLAG_FLOW_OUT, "step", "QueryClient(Start)",
+@@ -191,17 +186,6 @@ void RenderWidgetTargeter::FindTargetAndDispatch(
+     // by HitTestQuery.
+     QueryClient(root_view, root_view, *event_ptr, latency, event_location,
+                 nullptr, gfx::PointF());
+-  } else {
+-    FoundTarget(root_view, target, *event_ptr, latency, result.target_location,
+-                result.latched_target, viz::FrameSinkId());
+-    // Verify the event targeting results from surface layer viz hit testing if
+-    // --use-viz-hit-test-surface-layer is enabled.
+-    if (result.should_verify_result && !target->IsRenderWidgetHostViewGuest()) {
+-      QueryAndVerifyClient(root_view, root_view, *event_ptr, latency,
+-                           event_location, nullptr, gfx::PointF(),
+-                           target->GetFrameSinkId());
+-    }
+-  }
+ }
+ 
+ void RenderWidgetTargeter::ViewWillBeDestroyed(RenderWidgetHostViewBase* view) {

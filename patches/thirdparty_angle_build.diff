@@ -1,0 +1,15 @@
+ BUILD.gn | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/BUILD.gn b/BUILD.gn
+index b2440d1c2..4694da44b 100644
+--- a/BUILD.gn
++++ b/BUILD.gn
+@@ -118,6 +118,7 @@ config("extra_warnings") {
+       "/we4458",  # declaration hides class member.
+       "/we4800",  # forcing value to bool.
+       "/we4838",  # narrowing conversion.
++      "-Wno-unused-command-line-argument"
+     ]
+   }
+   if (is_clang) {
