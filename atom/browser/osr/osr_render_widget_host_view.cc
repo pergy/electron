@@ -1066,7 +1066,7 @@ void OffScreenRenderWidgetHostView::SetPainting(bool painting) {
   }
 
   if (juststarted) {
-    Invalidate();
+    GetCompositor()->ScheduleFullRedraw();
   }
 }
 
@@ -1156,7 +1156,6 @@ void OffScreenRenderWidgetHostView::SetupFrameRate(bool force) {
 
 void OffScreenRenderWidgetHostView::Invalidate() {
   InvalidateBounds(gfx::Rect(SizeInPixels()));
-  GetCompositor()->ScheduleFullRedraw();
 }
 
 void OffScreenRenderWidgetHostView::InvalidateBounds(const gfx::Rect& bounds) {
