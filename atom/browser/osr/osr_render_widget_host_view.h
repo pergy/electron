@@ -39,7 +39,6 @@
 #include "ui/gfx/geometry/point.h"
 
 #include "components/viz/host/host_display_client.h"
-#include "ui/compositor/external_begin_frame_client.h"
 
 #if defined(OS_WIN)
 #include "ui/gfx/win/window_impl.h"
@@ -52,7 +51,6 @@ class CursorManager;
 namespace atom {
 
 class AtomCopyFrameGenerator;
-class AtomBeginFrameTimer;
 
 class AtomDelegatedFrameHostClient;
 
@@ -61,7 +59,6 @@ typedef base::Callback<void(const gfx::Rect&)> OnPopupPaintCallback;
 typedef base::Callback<void(const content::WebCursor&)> OnCursorChangedCallback;
 
 class OffScreenRenderWidgetHostView : public content::RenderWidgetHostViewBase,
-                                      public ui::ExternalBeginFrameClient,
                                       public ui::CompositorDelegate,
                                       public OffscreenViewProxyObserver {
  public:
@@ -80,9 +77,6 @@ class OffScreenRenderWidgetHostView : public content::RenderWidgetHostViewBase,
   content::BrowserAccessibilityManager* CreateBrowserAccessibilityManager(
       content::BrowserAccessibilityDelegate*,
       bool) override;
-
-  void OnDisplayDidFinishFrame(const viz::BeginFrameAck& ack) override;
-  void OnNeedsExternalBeginFrames(bool needs_begin_frames) override;
 
   // content::RenderWidgetHostView:
   void InitAsChild(gfx::NativeView) override;
@@ -182,9 +176,6 @@ class OffScreenRenderWidgetHostView : public content::RenderWidgetHostViewBase,
       ui::Compositor* compositor) override;
 
   bool InstallTransparency();
-
-  void OnBeginFrameTimerTick();
-  void SendBeginFrame(base::TimeTicks frame_time, base::TimeDelta vsync_period);
 
   void CancelWidget();
   void AddGuestHostView(OffScreenRenderWidgetHostView* guest_host);
@@ -305,13 +296,11 @@ class OffScreenRenderWidgetHostView : public content::RenderWidgetHostViewBase,
 
   std::unique_ptr<content::CursorManager> cursor_manager_;
 
-  std::unique_ptr<AtomBeginFrameTimer> begin_frame_timer_;
   OffScreenHostDisplayClient* host_display_client_;
   std::unique_ptr<OffScreenVideoConsumer> video_consumer_;
 
   // Provides |source_id| for BeginFrameArgs that we create.
   viz::StubBeginFrameSource begin_frame_source_;
-  uint64_t begin_frame_number_ = viz::BeginFrameArgs::kStartingFrameNumber;
 
   std::unique_ptr<AtomDelegatedFrameHostClient> delegated_frame_host_client_;
 

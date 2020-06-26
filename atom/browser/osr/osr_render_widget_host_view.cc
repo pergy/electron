@@ -23,7 +23,7 @@
 #include "content/browser/renderer_host/cursor_manager.h"  // nogncheck
 #include "content/browser/renderer_host/input/synthetic_gesture_target.h"  // nogncheck
 #include "content/browser/renderer_host/render_widget_host_delegate.h"  // nogncheck
-#include "content/browser/renderer_host/render_widget_host_input_event_router.h"
+#include "content/browser/renderer_host/render_widget_host_input_event_router.h"  // nogncheck
 #include "content/browser/renderer_host/render_widget_host_owner_delegate.h"  // nogncheck
 #include "content/common/view_messages.h"
 #include "content/public/browser/browser_task_traits.h"
@@ -121,40 +121,6 @@ ui::MouseWheelEvent UiMouseWheelEventFromWebMouseEvent(
 }
 
 }  // namespace
-
-class AtomBeginFrameTimer : public viz::DelayBasedTimeSourceClient {
- public:
-  AtomBeginFrameTimer(int frame_rate_threshold_us,
-                      const base::Closure& callback)
-      : paint_callback_(callback) {
-    time_source_.reset(new viz::DelayBasedTimeSource(
-        base::CreateSingleThreadTaskRunnerWithTraits(
-            {content::BrowserThread::UI})
-            .get()));
-    time_source_->SetTimebaseAndInterval(
-        base::TimeTicks(),
-        base::TimeDelta::FromMicroseconds(frame_rate_threshold_us));
-    time_source_->SetClient(this);
-  }
-
-  void SetActive(bool active) { time_source_->SetActive(active); }
-
-  bool IsActive() const { return time_source_->Active(); }
-
-  void SetFrameRateThresholdUs(int frame_rate_threshold_us) {
-    time_source_->SetTimebaseAndInterval(
-        base::TimeTicks::Now(),
-        base::TimeDelta::FromMicroseconds(frame_rate_threshold_us));
-  }
-
- private:
-  void OnTimerTick() override { paint_callback_.Run(); }
-
-  const base::Closure paint_callback_;
-  std::unique_ptr<viz::DelayBasedTimeSource> time_source_;
-
-  DISALLOW_COPY_AND_ASSIGN(AtomBeginFrameTimer);
-};
 
 class AtomDelegatedFrameHostClient : public content::DelegatedFrameHostClient {
  public:
@@ -256,24 +222,23 @@ OffScreenRenderWidgetHostView::OffScreenRenderWidgetHostView(
 
   ui::ContextFactoryPrivate* context_factory_private =
       factory->GetContextFactoryPrivate();
-  compositor_.reset(
-      new ui::Compositor(context_factory_private->AllocateFrameSinkId(),
-                         content::GetContextFactory(), context_factory_private,
-                         base::ThreadTaskRunnerHandle::Get(),
-                         false /* enable_pixel_canvas */, this));
+  compositor_ = std::make_unique<ui::Compositor>(
+      context_factory_private->AllocateFrameSinkId(),
+      content::GetContextFactory(), context_factory_private,
+      base::ThreadTaskRunnerHandle::Get(), false /* enable_pixel_canvas */,
+      nullptr /* external_begin_frame_client */);
   compositor_->SetAcceleratedWidget(gfx::kNullAcceleratedWidget);
+  compositor_->SetDelegate(this);
   compositor_->SetRootLayer(root_layer_.get());
-
-  GetCompositor()->SetDelegate(this);
 
   ResizeRootLayer(false);
   render_widget_host_->SetView(this);
   InstallTransparency();
 
   if (content::GpuDataManager::GetInstance()->HardwareAccelerationEnabled()) {
-    video_consumer_.reset(new OffScreenVideoConsumer(
+    video_consumer_ = std::make_unique<OffScreenVideoConsumer>(
         this, base::Bind(&OffScreenRenderWidgetHostView::OnPaintBitmap,
-                         weak_ptr_factory_.GetWeakPtr())));
+                         weak_ptr_factory_.GetWeakPtr()));
     video_consumer_->SetActive(IsPainting());
     video_consumer_->SetFrameRate(GetFrameRate());
   }
@@ -304,44 +269,6 @@ OffScreenRenderWidgetHostView::CreateBrowserAccessibilityManager(
     content::BrowserAccessibilityDelegate*,
     bool) {
   return nullptr;
-}
-
-void OffScreenRenderWidgetHostView::OnBeginFrameTimerTick() {
-  const base::TimeTicks frame_time = base::TimeTicks::Now();
-  const base::TimeDelta vsync_period =
-      base::TimeDelta::FromMicroseconds(frame_rate_threshold_us_);
-  SendBeginFrame(frame_time, vsync_period);
-}
-
-void OffScreenRenderWidgetHostView::SendBeginFrame(
-    base::TimeTicks frame_time,
-    base::TimeDelta vsync_period) {
-  base::TimeTicks display_time = frame_time + vsync_period;
-
-  base::TimeDelta estimated_browser_composite_time =
-      base::TimeDelta::FromMicroseconds(
-          (1.0f * base::Time::kMicrosecondsPerSecond) / (3.0f * 60));
-
-  base::TimeTicks deadline = display_time - estimated_browser_composite_time;
-
-  const viz::BeginFrameArgs& begin_frame_args = viz::BeginFrameArgs::Create(
-      BEGINFRAME_FROM_HERE, begin_frame_source_.source_id(),
-      begin_frame_number_, frame_time, deadline, vsync_period,
-      viz::BeginFrameArgs::NORMAL);
-  DCHECK(begin_frame_args.IsValid());
-  begin_frame_number_++;
-
-  compositor_->context_factory_private()->IssueExternalBeginFrame(
-      compositor_.get(), begin_frame_args);
-}
-
-void OffScreenRenderWidgetHostView::OnDisplayDidFinishFrame(
-    const viz::BeginFrameAck& ack) {}
-
-void OffScreenRenderWidgetHostView::OnNeedsExternalBeginFrames(
-    bool needs_begin_frames) {
-  SetupFrameRate(true);
-  begin_frame_timer_->SetActive(needs_begin_frames);
 }
 
 void OffScreenRenderWidgetHostView::InitAsChild(gfx::NativeView) {
@@ -790,10 +717,16 @@ bool OffScreenRenderWidgetHostView::InstallTransparency() {
 void OffScreenRenderWidgetHostView::SetNeedsBeginFrames(
     bool needs_begin_frames) {
   SetupFrameRate(true);
-  begin_frame_timer_->SetActive(needs_begin_frames);
+  if (host_display_client_) {
+    host_display_client_->SetActive(IsPainting());
+  }
 }
 
-void OffScreenRenderWidgetHostView::SetWantsAnimateOnlyBeginFrames() {}
+void OffScreenRenderWidgetHostView::SetWantsAnimateOnlyBeginFrames() {
+  if (delegated_frame_host_) {
+    delegated_frame_host_->SetWantsAnimateOnlyBeginFrames();
+  }
+}
 
 #if defined(OS_MACOSX)
 void OffScreenRenderWidgetHostView::SetActive(bool active) {}
@@ -1150,13 +1083,10 @@ void OffScreenRenderWidgetHostView::SetupFrameRate(bool force) {
 
   frame_rate_threshold_us_ = 1000000 / frame_rate_;
 
-  if (begin_frame_timer_.get()) {
-    begin_frame_timer_->SetFrameRateThresholdUs(frame_rate_threshold_us_);
-  } else {
-    begin_frame_timer_.reset(new AtomBeginFrameTimer(
-        frame_rate_threshold_us_,
-        base::Bind(&OffScreenRenderWidgetHostView::OnBeginFrameTimerTick,
-                   weak_ptr_factory_.GetWeakPtr())));
+  if (compositor_) {
+    compositor_->SetDisplayVSyncParameters(
+        base::TimeTicks::Now(),
+        base::TimeDelta::FromMicroseconds(frame_rate_threshold_us_));
   }
 }
 
